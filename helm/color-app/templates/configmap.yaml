@@ -1,11 +1,11 @@
+{{- if .Values.configMap.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "color-app.fullname" . }}-config
-  namespace: {{ .Values.namespace }}
+  name: {{ printf "%s-config" (include "color-app.fullname" .) | trunc 63 | trimSuffix "-" }}
+  namespace: {{ include "color-app.namespace" . }}
   labels:
     {{- include "color-app.labels" . | nindent 4 }}
 data:
-  APP_COLOR: {{ .Values.configmap.APP_COLOR | quote }}
-  APP_ENV: {{ .Values.configmap.APP_ENV | quote }}
-  APP_MESSAGE: {{ .Values.configmap.APP_MESSAGE | quote }}
+  {{- toYaml .Values.configMap.data | nindent 2 }}
+{{- end }}

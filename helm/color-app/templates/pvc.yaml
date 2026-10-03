@@ -1,14 +1,18 @@
+{{- if .Values.persistence.enabled }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ include "color-app.fullname" . }}-pvc
-  namespace: {{ .Values.namespace }}
+  name: {{ printf "%s-pvc" (include "color-app.fullname" .) | trunc 63 | trimSuffix "-" }}
+  namespace: {{ include "color-app.namespace" . }}
   labels:
     {{- include "color-app.labels" . | nindent 4 }}
 spec:
   accessModes:
-  - {{ .Values.volume.accessMode }}
-  storageClassName: {{ .Values.volume.storageClass }}
+    {{- toYaml .Values.persistence.accessModes | nindent 4 }}
   resources:
     requests:
-      storage: {{ .Values.volume.size }}
+      storage: {{ .Values.persistence.size }}
+  {{- with .Values.persistence.storageClassName }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+{{- end }}

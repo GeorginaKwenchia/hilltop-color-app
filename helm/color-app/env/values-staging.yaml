@@ -1,5 +1,5 @@
-# Production environment values for the color-app chart.
-replicaCount: 3
+# Staging environment values for the color-app chart.
+replicaCount: 2
 
 image:
   repository: 905740063985.dkr.ecr.us-east-1.amazonaws.com/color-app
@@ -32,14 +32,14 @@ service:
 
 namespace:
   create: false
-  name: production
+  name: staging
 
 configMap:
   enabled: true
   data:
-    APP_COLOR: blue
-    APP_ENV: production
-    APP_MESSAGE: "Welcome to the Production Color App!"
+    APP_COLOR: orange
+    APP_ENV: staging
+    APP_MESSAGE: "Welcome to the Staging Color App!"
 
 secret:
   enabled: true
@@ -63,15 +63,15 @@ externalSecret:
   data:
     - secretKey: SECRET_KEY
       remoteRef:
-        key: color-app/prod
+        key: color-app/staging
         property: SECRET_KEY
     - secretKey: DB_PASSWORD
       remoteRef:
-        key: color-app/prod
+        key: color-app/staging
         property: DB_PASSWORD
     - secretKey: API_KEY
       remoteRef:
-        key: color-app/prod
+        key: color-app/staging
         property: API_KEY
 
 persistence:
@@ -117,9 +117,9 @@ resources:
 
 autoscaling:
   enabled: true
-  minReplicas: 3
-  maxReplicas: 10
-  targetCPUUtilizationPercentage: 60
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
 
 nodeSelector: {}
 tolerations: []

@@ -2,15 +2,15 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "color-app.fullname" . }}-hpa
-  namespace: {{ .Values.namespace }}
+  name: {{ printf "%s-hpa" (include "color-app.fullname" .) | trunc 63 | trimSuffix "-" }}
+  namespace: {{ include "color-app.namespace" . }}
   labels:
     {{- include "color-app.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "color-app.fullname" . }}-deployment
+    name: {{ include "color-app.deploymentName" . }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
   metrics:

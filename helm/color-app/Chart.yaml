@@ -1,6 +1,6 @@
 apiVersion: v2
 name: color-app
-description: Helm Chart for deploying the color-app application
+description: Helm chart for deploying color-app application
 
 # A chart can be either an 'application' or a 'library' chart.
 #

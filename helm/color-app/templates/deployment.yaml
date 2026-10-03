@@ -1,8 +1,12 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "color-app.fullname" . }}-deployment
-  namespace: {{ .Values.namespace }}
+  name: {{ include "color-app.deploymentName" . }}
+  namespace: {{ include "color-app.namespace" . }}
+  {{- if and .Values.externalSecret.enabled (.Values.reloader).enabled }}
+  annotations:
+    secret.reloader.stakater.com/reload: {{ .Values.externalSecret.target.name | quote }}
+  {{- end }}
   labels:
     {{- include "color-app.labels" . | nindent 4 }}
 spec:
@@ -15,11 +19,22 @@ spec:
   template:
     metadata:
       annotations:
+        {{- if .Values.configMap.enabled }}
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-        checksum/secret: {{ include (print $.Template.BasePath "/externalsecret.yaml") . | sha256sum }}
-        checksum/secretstore: {{ include (print $.Template.BasePath "/secretstore.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if and .Values.secret.enabled (not .Values.externalSecret.enabled) }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.externalSecret.enabled }}
+        checksum/external-secret: {{ include (print $.Template.BasePath "/external-secret.yaml") . | sha256sum }}
+        checksum/secret-store: {{ include (print $.Template.BasePath "/secretstore.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.persistence.enabled }}
         checksum/pvc: {{ include (print $.Template.BasePath "/pvc.yaml") . | sha256sum }}
-        checksum/sa: {{ include (print $.Template.BasePath "/serviceaccount.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.serviceAccount.create }}
+        checksum/service-account: {{ include (print $.Template.BasePath "/serviceaccount.yaml") . | sha256sum }}
+        {{- end }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -33,43 +48,61 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "color-app.serviceAccountName" . }}-sa
+      serviceAccountName: {{ include "color-app.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
               containerPort: 8080
               protocol: TCP
+          {{- if .Values.configMap.enabled }}
           envFrom:
             - configMapRef:
-                name: {{ include "color-app.fullname" . }}-config
+                name: {{ printf "%s-config" (include "color-app.fullname" .) | trunc 63 | trimSuffix "-" }}
+          {{- end }}
+          {{- if .Values.externalSecret.enabled }}
           env:
             - name: SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "color-app.fullname" . }}-secret
+                  name: {{ .Values.externalSecret.target.name | quote }}
                   key: SECRET_KEY
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "color-app.fullname" . }}-secret
+                  name: {{ .Values.externalSecret.target.name | quote }}
                   key: DB_PASSWORD
             - name: API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "color-app.fullname" . }}-secret
+                  name: {{ .Values.externalSecret.target.name | quote }}
                   key: API_KEY
+          {{- end }}
+          {{- with .Values.resources }}
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if .Values.persistence.enabled }}
           volumeMounts:
             - name: app-data
-              mountPath: /usr/src/app/data
+              mountPath: {{ .Values.persistence.mountPath | quote }}
+          {{- end }}
+      {{- if .Values.persistence.enabled }}
       volumes:
         - name: app-data
           persistentVolumeClaim:
-            claimName: {{ include "color-app.fullname" . }}-pvc
+            claimName: {{ printf "%s-pvc" (include "color-app.fullname" .) | trunc 63 | trimSuffix "-" }}
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

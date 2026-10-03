@@ -23,6 +23,14 @@ If release name contains chart name it will be used as a full name.
 {{- end }}
 {{- end }}
 
+{{- define "color-app.deploymentName" -}}
+{{- printf "%s-deployment" (include "color-app.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{- define "color-app.serviceName" -}}
+{{- printf "%s-lb" (include "color-app.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
 {{/*
 Create chart name and version as used by the chart label.
 */}}
@@ -55,8 +63,15 @@ Create the name of the service account to use
 */}}
 {{- define "color-app.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "color-app.fullname" .) .Values.serviceAccount.name }}
+{{- default (printf "%s-sa" (include "color-app.fullname" .) | trunc 63 | trimSuffix "-") .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
+{{- end }}
+
+{{/*
+Namespace for all resources: values override, else the release namespace
+*/}}
+{{- define "color-app.namespace" -}}
+{{- default .Release.Namespace .Values.namespace.name }}
 {{- end }}
